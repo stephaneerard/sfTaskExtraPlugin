@@ -26,7 +26,7 @@ class sfTestPluginTask extends sfTaskExtraTestBaseTask
 
     $this->addOptions(array(
       new sfCommandOption('only', null, sfCommandOption::PARAMETER_REQUIRED, 'Only run "unit" or "functional" tests'),
-    	new sfCommandOption('unit', null, sfCommandOption::PARAMETER_OPTIONAL, 'Only run for specified unit test'),
+    	new sfCommandOption('name', null, sfCommandOption::PARAMETER_OPTIONAL | sfCommandOption::IS_ARRAY, 'Only run for specified unit test'),
     	new sfCommandOption('app', null, sfCommandOption::PARAMETER_OPTIONAL, 'When running functional tests, you must define the app'),
     ));
 
@@ -63,15 +63,7 @@ EOF;
 
     // use the test:* task but filter the files
     $this->plugins = $arguments['plugin'];
-    if($options['unit'])
-    {
-    	$this->unit = $options['unit'];
-    	$this->dispatcher->connect('task.test.filter_test_files', array($this, 'filterTestFilesUnit'));
-    }
-    else
-    {
-    	$this->dispatcher->connect('task.test.filter_test_files', array($this, 'filterTestFiles'));
-    }
+    $this->dispatcher->connect('task.test.filter_test_files', array($this, 'filterTestFiles'));
 
     switch ($options['only'])
     {
@@ -94,7 +86,14 @@ EOF;
     		$task->run(array('app' => $options['app']), array());
     		break;
     	default:
-    		$task->run();
+    		if($options['name'])
+    		{
+    			$task->run(array('name' => $options['name']));
+    		}
+    		else
+    		{
+    			$task->run();
+    		}
     		break;
     }
     
@@ -118,26 +117,6 @@ EOF;
     }
 
     return $filtered;
-  }
-  
-  public function filterTestFilesUnit(sfEvent $event, $files)
-  {
-  	$filtered = array();
-  	foreach ($this->plugins as $plugin)
-  	{
-  		$filtered = $this->configuration->getPluginConfiguration($plugin)->filterTestFiles($event, $filtered);
-  	}
-  	
-  	$return = array();
-  	foreach($filtered as $filter)
-  	{
-  		if(false !== strpos($filter, $this->unit))
-  		{
-  			$return[] = $filter;
-  		}
-  	}
-  
-  	return $return;
   }
   
 }
